@@ -20,16 +20,39 @@ export async function POST(request) {
   const session = await getSession()
   if (!session) return NextResponse.json({ error: "अनधिकृत" }, { status: 401 })
 
-  const { naam, unit, daam, gst } = await request.json()
+  const { naam, unit, daam, gst, stock, minStock } = await request.json()
   if (!naam || !daam) return NextResponse.json({ error: "नाम और दाम जरूरी है" }, { status: 400 })
 
   await db.insert(products).values({
     tenantId: session.tenantId,
     name: naam,
-    unit,
+    unit: unit || 'pcs',
     pricePerUnit: parseInt(daam),
-    gstPercent: parseInt(gst),
+    gstPercent: parseInt(gst || 0),
+    currentStock: parseInt(stock || 0),
+    minStock: parseInt(minStock || 5),
   })
+
+  return NextResponse.json({ success: true })
+}
+
+export async function PATCH(request) {
+  const session = await getSession()
+  if (!session) return NextResponse.json({ error: "अनधिकृत" }, { status: 401 })
+
+  const { id, naam, daam, gst, stock, minStock } = await request.json()
+  if (!id) return NextResponse.json({ error: "id जरूरी है" }, { status: 400 })
+
+  await db
+    .update(products)
+    .set({
+      ...(naam && { name: naam }),
+      ...(daam && { pricePerUnit: parseInt(daam) }),
+      ...(gst !== undefined && { gstPercent: parseInt(gst) }),
+      ...(stock !== undefined && { currentStock: parseInt(stock) }),
+      ...(minStock !== undefined && { minStock: parseInt(minStock) }),
+    })
+    .where(eq(products.id, id))
 
   return NextResponse.json({ success: true })
 }

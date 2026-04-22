@@ -28,7 +28,7 @@ export const users = sqliteTable('users', {
   createdAt: text('created_at').default(sql`(datetime('now'))`),
 })
 
-// PRODUCTS (सामान / आइटम)
+// PRODUCTS (सामान / आइटम) — currentStock जोड़ा
 export const products = sqliteTable('products', {
   id: integer('id').primaryKey({ autoIncrement: true }),
   tenantId: integer('tenant_id').notNull().references(() => tenants.id),
@@ -36,6 +36,8 @@ export const products = sqliteTable('products', {
   unit: text('unit').notNull().default('pcs'),
   pricePerUnit: integer('price_per_unit').notNull().default(0),
   gstPercent: integer('gst_percent').notNull().default(0),
+  currentStock: integer('current_stock').notNull().default(0),   // नया ✓
+  minStock: integer('min_stock').notNull().default(5),           // नया ✓
   isActive: integer('is_active', { mode: 'boolean' }).notNull().default(true),
   createdAt: text('created_at').default(sql`(datetime('now'))`),
 })
@@ -51,13 +53,14 @@ export const customers = sqliteTable('customers', {
   createdAt: text('created_at').default(sql`(datetime('now'))`),
 })
 
-// INVOICES (बिल)
+// INVOICES (बिल) — paymentMode जोड़ा
 export const invoices = sqliteTable('invoices', {
   id: integer('id').primaryKey({ autoIncrement: true }),
   tenantId: integer('tenant_id').notNull().references(() => tenants.id),
   customerId: integer('customer_id').references(() => customers.id),
   invoiceNumber: text('invoice_number').notNull(),
   status: text('status').notNull().default('unpaid'),
+  paymentMode: text('payment_mode').notNull().default('cash'), // नया ✓
   totalAmount: integer('total_amount').notNull().default(0),
   gstAmount: integer('gst_amount').notNull().default(0),
   discount: integer('discount').notNull().default(0),

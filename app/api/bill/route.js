@@ -1,5 +1,5 @@
 import { db } from '@/lib/db.js'
-import { invoices, invoiceItems, customers } from '@/db/schema.js'
+import { invoices, invoiceItems, customers, products } from '@/db/schema.js'
 import { getSession } from '@/lib/session.js'
 import { eq, desc, sql } from 'drizzle-orm'
 import { NextResponse } from 'next/server'
@@ -13,6 +13,7 @@ export async function GET(request) {
       id: invoices.id,
       invoiceNumber: invoices.invoiceNumber,
       status: invoices.status,
+      paymentMode: invoices.paymentMode,
       totalAmount: invoices.totalAmount,
       createdAt: invoices.createdAt,
       grahakNaam: customers.name,
@@ -29,12 +30,23 @@ export async function POST(request) {
   const session = await getSession()
   if (!session) return NextResponse.json({ error: 'अनधिकृत' }, { status: 401 })
 
-  const { customerId, items, discount, notes, status, totalAmount, gstAmount } = await request.json()
+  const { customerId, items, discount, notes, status, paymentMode, totalAmount, gstAmount } =
+    await request.json()
+
   if (!items || items.length === 0) {
     return NextResponse.json({ error: 'सामान जरूरी है' }, { status: 400 })
   }
 
-  // Invoice number बनाओ
+  // Server-side total recalculate — frontend पर trust नहीं
+  const serverSubtotal = items.reduce(
+    (s, i) => s + parseInt(i.pricePerUnit) * parseInt(i.quantity), 0
+  )
+  const serverGst = items.reduce(
+    (s, i) => s + Math.round(parseInt(i.pricePerUnit) * parseInt(i.quantity) * parseInt(i.gstPercent) / 100), 0
+  )
+  const serverTotal = serverSubtotal + serverGst - parseInt(discount || 0)
+
+  // Invoice number
   const [countRow] = await db
     .select({ count: sql`count(*)` })
     .from(invoices)
@@ -44,7 +56,7 @@ export async function POST(request) {
   const today = new Date().toISOString().split('T')[0].replace(/-/g, '')
   const invoiceNumber = `INV-${today}-${num}`
 
-  // Invoice insert करो
+  // Invoice insert
   const result = await db
     .insert(invoices)
     .values({
@@ -52,8 +64,9 @@ export async function POST(request) {
       customerId: customerId ? parseInt(customerId) : null,
       invoiceNumber,
       status: status || 'unpaid',
-      totalAmount: parseInt(totalAmount),
-      gstAmount: parseInt(gstAmount),
+      paymentMode: paymentMode || 'cash',
+      totalAmount: serverTotal,
+      gstAmount: serverGst,
       discount: parseInt(discount || 0),
       notes: notes || null,
     })
@@ -61,7 +74,7 @@ export async function POST(request) {
 
   const invoiceId = result[0].id
 
-  // Items insert करो
+  // Items insert + stock deduct एक साथ
   await db.insert(invoiceItems).values(
     items.map((item) => ({
       invoiceId,
@@ -73,6 +86,18 @@ export async function POST(request) {
       total: parseInt(item.pricePerUnit) * parseInt(item.quantity),
     }))
   )
+
+  // Stock deduct — सिर्फ उन items के लिए जिनका productId है
+  for (const item of items) {
+    if (item.productId) {
+      await db
+        .update(products)
+        .set({
+          currentStock: sql`max(0, ${products.currentStock} - ${parseInt(item.quantity)})`,
+        })
+        .where(eq(products.id, item.productId))
+    }
+  }
 
   return NextResponse.json({ success: true, invoiceId })
 }

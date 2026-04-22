@@ -10,6 +10,7 @@ export default function NayaBillPage() {
   const [items, setItems] = useState([])
   const [discount, setDiscount] = useState(0)
   const [status, setStatus] = useState('unpaid')
+  const [paymentMode, setPaymentMode] = useState('cash')
   const [loading, setLoading] = useState(false)
 
   useEffect(() => {
@@ -54,6 +55,7 @@ export default function NayaBillPage() {
         items,
         discount: parseInt(discount || 0),
         status,
+        paymentMode,
         totalAmount: total,
         gstAmount,
       }),
@@ -65,6 +67,13 @@ export default function NayaBillPage() {
       alert('कुछ गलत हुआ')
       setLoading(false)
     }
+  }
+
+  const modeConfig = {
+    cash:  { label: '💵 नकद',  color: 'green' },
+    upi:   { label: '📱 UPI',   color: 'purple' },
+    card:  { label: '💳 कार्ड', color: 'blue' },
+    credit:{ label: '📋 उधार', color: 'orange' },
   }
 
   return (
@@ -85,7 +94,7 @@ export default function NayaBillPage() {
           <option value="">— नकद / वॉक-इन —</option>
           {sabGrahak.map((g) => (
             <option key={g.id} value={g.id}>
-              {g.name}{g.phone ? ` (${g.phone})` : ''}
+              {g.name}{g.phone ? ` (${g.phone})` : ''}{g.bakaya > 0 ? ` ⚠️ ₹${g.bakaya} बाकी` : ''}
             </option>
           ))}
         </select>
@@ -100,6 +109,7 @@ export default function NayaBillPage() {
         <div className="grid grid-cols-2 gap-2">
           {sabSaman.map((s) => {
             const added = !!items.find((i) => i.productId === s.id)
+            const kamStock = s.currentStock <= s.minStock
             return (
               <button
                 key={s.id}
@@ -110,6 +120,9 @@ export default function NayaBillPage() {
               >
                 <p className="font-medium text-gray-800 truncate">{s.name}</p>
                 <p className="text-xs text-gray-400">₹{s.pricePerUnit}/{s.unit}</p>
+                {kamStock && (
+                  <p className="text-xs text-red-500">⚠️ {s.currentStock} बचा</p>
+                )}
               </button>
             )
           })}
@@ -154,9 +167,33 @@ export default function NayaBillPage() {
         />
       </div>
 
+      {/* भुगतान का तरीका — नया */}
+      <div className="mb-4">
+        <label className="text-xs text-gray-500 mb-2 block">भुगतान का तरीका</label>
+        <div className="grid grid-cols-4 gap-2">
+          {Object.entries(modeConfig).map(([mode, cfg]) => (
+            <button
+              key={mode}
+              onClick={() => {
+                setPaymentMode(mode)
+                if (mode === 'credit') setStatus('unpaid')
+                else setStatus('paid')
+              }}
+              className={`py-2.5 rounded-xl text-xs font-semibold border transition ${
+                paymentMode === mode
+                  ? 'bg-blue-600 text-white border-blue-600'
+                  : 'bg-white text-gray-600 border-gray-200'
+              }`}
+            >
+              {cfg.label}
+            </button>
+          ))}
+        </div>
+      </div>
+
       {/* भुगतान स्थिति */}
       <div className="mb-5">
-        <label className="text-xs text-gray-500 mb-2 block">भुगतान</label>
+        <label className="text-xs text-gray-500 mb-2 block">स्थिति</label>
         <div className="flex gap-2">
           <button
             onClick={() => setStatus('paid')}
