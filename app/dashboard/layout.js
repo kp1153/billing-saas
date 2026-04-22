@@ -10,7 +10,15 @@ export default async function DashboardLayout({ children }) {
     <div className="min-h-screen bg-gray-50">
       <header className="bg-white border-b border-gray-100 px-4 py-3 flex items-center justify-between sticky top-0 z-10">
         <h1 className="text-lg font-bold text-blue-600">निशांत बिलिंग</h1>
-        <span className="text-xs text-gray-500">{session.name}</span>
+        <div className="flex items-center gap-3">
+          <span className="text-xs text-gray-500">{session.name}</span>
+          <a
+            href="/api/logout"
+            className="text-xs text-red-400 border border-red-200 px-2 py-1 rounded-lg"
+          >
+            बाहर
+          </a>
+        </div>
       </header>
       <main className="pb-24">{children}</main>
       <nav className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-100 flex justify-around py-2 z-10">

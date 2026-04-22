@@ -1,3 +1,5 @@
+// app/api/auth/callback/route.js
+
 import { google } from '@/lib/google.js'
 import { db } from '@/lib/db.js'
 import { tenants, users } from '@/db/schema.js'
@@ -5,6 +7,8 @@ import { createSession, setSessionCookie } from '@/lib/session.js'
 import { eq } from 'drizzle-orm'
 import { cookies } from 'next/headers'
 import { NextResponse } from 'next/server'
+
+const WHITELIST = ['prasad.kamta@gmail.com']
 
 export async function GET(request) {
   const { searchParams } = new URL(request.url)
@@ -36,27 +40,23 @@ export async function GET(request) {
       .limit(1)
 
     if (user.length === 0) {
-      // slug बनाओ
       const slug = googleUser.email
         .split('@')[0]
         .toLowerCase()
         .replace(/[^a-z0-9]/g, '-')
 
-      // tenant बनाओ
       await db.insert(tenants).values({
         name: googleUser.name,
         slug,
         ownerEmail: googleUser.email,
       })
 
-      // tenant fetch करो
       const newTenant = await db
         .select()
         .from(tenants)
         .where(eq(tenants.ownerEmail, googleUser.email))
         .limit(1)
 
-      // user बनाओ
       await db.insert(users).values({
         tenantId: newTenant[0].id,
         name: googleUser.name,
@@ -65,7 +65,6 @@ export async function GET(request) {
         role: 'owner',
       })
 
-      // user fetch करो
       user = await db
         .select()
         .from(users)
@@ -73,7 +72,6 @@ export async function GET(request) {
         .limit(1)
     }
 
-    // tenant fetch करो
     const tenant = await db
       .select()
       .from(tenants)
@@ -92,28 +90,29 @@ export async function GET(request) {
 
     await setSessionCookie(token)
 
-    // HUB_SECRET वाला super admin
-    if (googleUser.email === process.env.HUB_SECRET) {
+    // 1. Whitelist — हमेशा dashboard
+    if (WHITELIST.includes(googleUser.email)) {
       return NextResponse.redirect(new URL('/dashboard', request.url))
     }
 
+    // 2. Active tenant — dashboard
     if (tenant[0].isActive) {
       return NextResponse.redirect(new URL('/dashboard', request.url))
     }
 
-    // Trial — 7 दिन
+    // 3. Trial — 7 दिन के अंदर — dashboard
     const createdAt = new Date(tenant[0].createdAt.replace(' ', 'T'))
-    const now = new Date()
-    const diffDays = (now - createdAt) / (1000 * 60 * 60 * 24)
+    const diffDays = (Date.now() - createdAt) / (1000 * 60 * 60 * 24)
 
     if (diffDays <= 7) {
       return NextResponse.redirect(new URL('/dashboard', request.url))
     }
 
+    // 4. Expired
     return NextResponse.redirect(new URL('/expired', request.url))
 
   } catch (e) {
-    console.error(e)
+    console.error('[callback]', e)
     return NextResponse.redirect(new URL('/login?error=failed', request.url))
   }
 }
