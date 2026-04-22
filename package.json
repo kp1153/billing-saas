@@ -1,13 +1,18 @@
 {
   "name": "billing-saas",
-  "version": "0.1.0",
+  "version": "1.0.0",
+  "description": "निशांत बिलिंग - GST Billing Software",
+  "author": "Nishant Softwares <info@nishantsoftwares.in>",
   "private": true,
   "type": "module",
+  "main": "start-electron.js",
   "scripts": {
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint"
+    "lint": "eslint",
+    "electron": "electron .",
+    "electron:build": "electron-builder --config electron-builder.yml"
   },
   "dependencies": {
     "@libsql/client": "^0.17.2",
@@ -22,6 +27,8 @@
     "@tailwindcss/postcss": "^4",
     "babel-plugin-react-compiler": "1.0.0",
     "drizzle-kit": "^0.31.10",
+    "electron": "^34.0.0",
+    "electron-builder": "^25.1.8",
     "eslint": "^9",
     "eslint-config-next": "16.2.4",
     "tailwindcss": "^4"

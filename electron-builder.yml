@@ -1,0 +1,31 @@
+appId: in.nishantsoftwares.billing
+productName: निशांत बिलिंग
+copyright: Copyright © 2026 Nishant Softwares
+
+directories:
+  output: dist-electron
+
+files:
+  - start-electron.js
+  - public/**
+  - package.json
+
+win:
+  icon: public/icon.ico
+  target:
+    - target: nsis
+      arch:
+        - x64
+    - target: portable
+      arch:
+        - x64
+
+nsis:
+  oneClick: false
+  allowToChangeInstallationDirectory: true
+  createDesktopShortcut: true
+  createStartMenuShortcut: true
+  shortcutName: निशांत बिलिंग
+
+portable:
+  artifactName: NishantBilling-Portable-${version}.exe

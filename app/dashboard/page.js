@@ -2,6 +2,7 @@ import { getSession } from "@/lib/session.js"
 import { db } from "@/lib/db.js"
 import { invoices, customers } from "@/db/schema.js"
 import { eq, desc, sql, and } from "drizzle-orm"
+import Link from "next/link"
 
 export default async function DashboardPage() {
   const session = await getSession()
@@ -37,6 +38,16 @@ export default async function DashboardPage() {
   return (
     <div className="px-4 py-5">
       <p className="text-gray-500 text-sm mb-4">नमस्ते, {session.name} 👋</p>
+
+      {/* Quick Action */}
+      <Link
+        href="/dashboard/bill/naya"
+        className="flex items-center justify-center gap-2 w-full bg-blue-600 text-white py-3.5 rounded-2xl font-semibold text-sm mb-5"
+      >
+        <span className="text-lg">+</span> नया बिल बनाएं
+      </Link>
+
+      {/* Stats */}
       <div className="grid grid-cols-2 gap-3 mb-6">
         <div className="bg-white rounded-2xl p-4 border border-gray-100">
           <p className="text-xs text-gray-400 mb-1">आज की बिक्री</p>
@@ -58,6 +69,7 @@ export default async function DashboardPage() {
         </div>
       </div>
 
+      {/* हाल के बिल */}
       <h2 className="text-sm font-semibold text-gray-700 mb-3">हाल के बिल</h2>
       <div className="space-y-2">
         {aakhiriBill.length === 0 && (
