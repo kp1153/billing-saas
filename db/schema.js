@@ -79,3 +79,13 @@ export const invoiceItems = sqliteTable('invoice_items', {
   gstPercent: integer('gst_percent').notNull().default(0),
   total: integer('total').notNull(),
 })
+export const preActivations = sqliteTable('pre_activations', {
+  id: integer('id').primaryKey({ autoIncrement: true }),
+  email: text('email').notNull().unique(),
+  createdAt: text('created_at').default(sql`CURRENT_TIMESTAMP`),
+})
+export const preActivations = sqliteTable('pre_activations', {
+  id: integer('id').primaryKey({ autoIncrement: true }),
+  email: text('email').notNull().unique(),
+  createdAt: text('created_at').default(sql`CURRENT_TIMESTAMP`),
+})

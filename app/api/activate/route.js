@@ -1,32 +1,26 @@
-// app/api/activate/route.js
-
 import { db } from '@/lib/db'
-import { tenants } from '@/db/schema'
+import { tenants, preActivations } from '@/db/schema'
 import { eq } from 'drizzle-orm'
 import { NextResponse } from 'next/server'
 
 export async function POST(req) {
   try {
+    const authHeader = req.headers.get('authorization')
     const body = await req.json()
     const { email, secret } = body
 
-    // 1. Secret check
-    if (!secret || secret !== process.env.HUB_SECRET) {
-      return NextResponse.json(
-        { error: 'Unauthorized' },
-        { status: 401 }
-      )
+    const secretValid =
+      authHeader === `Bearer ${process.env.HUB_SECRET}` ||
+      secret === process.env.HUB_SECRET
+
+    if (!secretValid) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
-    // 2. Email check
     if (!email) {
-      return NextResponse.json(
-        { error: 'Email required' },
-        { status: 400 }
-      )
+      return NextResponse.json({ error: 'Email required' }, { status: 400 })
     }
 
-    // 3. Tenant खोजो
     const existing = await db
       .select()
       .from(tenants)
@@ -34,27 +28,24 @@ export async function POST(req) {
       .limit(1)
 
     if (!existing.length) {
-      return NextResponse.json(
-        { error: 'Tenant not found' },
-        { status: 404 }
-      )
+      // Tenant नहीं है — pre_activations में save करो
+      try {
+        await db.insert(preActivations).values({ email })
+      } catch (_) {
+        // already exists — ignore
+      }
+      return NextResponse.json({ success: true, message: 'pre-activated' })
     }
 
-    // 4. Activate करो
     await db
       .update(tenants)
       .set({ isActive: true })
       .where(eq(tenants.ownerEmail, email))
 
-    return NextResponse.json(
-      { success: true, message: `${email} activated` },
-      { status: 200 }
-    )
+    return NextResponse.json({ success: true, message: `${email} activated` })
+
   } catch (err) {
     console.error('[activate]', err)
-    return NextResponse.json(
-      { error: 'Server error' },
-      { status: 500 }
-    )
+    return NextResponse.json({ error: 'Server error' }, { status: 500 })
   }
 }

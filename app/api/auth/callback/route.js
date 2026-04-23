@@ -1,8 +1,6 @@
-// app/api/auth/callback/route.js
-
 import { google } from '@/lib/google.js'
 import { db } from '@/lib/db.js'
-import { tenants, users } from '@/db/schema.js'
+import { tenants, users, preActivations } from '@/db/schema.js'
 import { createSession, setSessionCookie } from '@/lib/session.js'
 import { eq } from 'drizzle-orm'
 import { cookies } from 'next/headers'
@@ -32,7 +30,6 @@ export async function GET(request) {
     })
     const googleUser = await userRes.json()
 
-    // user ढूंढो
     let user = await db
       .select()
       .from(users)
@@ -56,6 +53,24 @@ export async function GET(request) {
         .from(tenants)
         .where(eq(tenants.ownerEmail, googleUser.email))
         .limit(1)
+
+      // pre_activations check — पहले pay किया, बाद में login
+      const preAct = await db
+        .select()
+        .from(preActivations)
+        .where(eq(preActivations.email, googleUser.email))
+        .limit(1)
+
+      if (preAct.length > 0) {
+        await db
+          .update(tenants)
+          .set({ isActive: true })
+          .where(eq(tenants.ownerEmail, googleUser.email))
+
+        await db
+          .delete(preActivations)
+          .where(eq(preActivations.email, googleUser.email))
+      }
 
       await db.insert(users).values({
         tenantId: newTenant[0].id,
