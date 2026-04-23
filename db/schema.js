@@ -84,8 +84,3 @@ export const preActivations = sqliteTable('pre_activations', {
   email: text('email').notNull().unique(),
   createdAt: text('created_at').default(sql`CURRENT_TIMESTAMP`),
 })
-export const preActivations = sqliteTable('pre_activations', {
-  id: integer('id').primaryKey({ autoIncrement: true }),
-  email: text('email').notNull().unique(),
-  createdAt: text('created_at').default(sql`CURRENT_TIMESTAMP`),
-})
